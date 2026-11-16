@@ -2,6 +2,7 @@
 // los archivos de contenido pasa por escapar() antes de entrar a la página.
 
 const { escapar } = require('./html.js');
+const { aHtml } = require('./markdown.js');
 
 // Solo se cargan recursos del propio sitio (la misma política de Nodos).
 const CSP =
@@ -15,15 +16,19 @@ const SECCIONES = [
 ];
 const MAX_ESCUCHA_PORTADA = 3;
 const MAX_FICHAS_PORTADA = 6;
+const MAX_ENTRADAS_PORTADA = 3;
+const RUTA_BLOG = 'blog/';
+const RUTA_FEED = 'blog/feed.xml';
 
 // El menú: solo aparecen las secciones que tienen algo.
-function menuDe({ textos, trabajos }) {
+function menuDe({ textos, trabajos, entradas }) {
   const menu = [{ texto: textos.menu.inicio, ruta: '' }];
   for (const s of SECCIONES) {
     if (trabajos.some((t) => t.tipo === s.tipo)) {
       menu.push({ texto: textos.menu[s.clave], ruta: s.ruta });
     }
   }
+  if (entradas.length) menu.push({ texto: textos.menu.blog, ruta: RUTA_BLOG });
   return menu;
 }
 
@@ -89,10 +94,17 @@ function pagina({ sitio, textos, titulo, ruta, menu, cuerpo }) {
   const tituloCompleto = titulo ? `${escapar(titulo)} · ${nombre}` : nombre;
   const enlaces = menu
     .map((m) => {
-      const actual = m.ruta === ruta ? ' aria-current="page"' : '';
+      const actual =
+        m.ruta === ruta || (m.ruta && ruta.startsWith(m.ruta)) ? ' aria-current="page"' : '';
       return `<a href="${raiz}${escapar(m.ruta)}"${actual}>${escapar(m.texto)}</a>`;
     })
     .join('\n');
+  const canal = sitio.conFeed
+    ? `<link rel="alternate" type="application/rss+xml" title="${nombre}" href="${raiz}${RUTA_FEED}">\n`
+    : '';
+  const pieCanal = sitio.conFeed
+    ? ` · <a href="${raiz}${RUTA_FEED}">${escapar(textos.frases.rss)}</a>`
+    : '';
   return `<!doctype html>
 <html lang="es">
 <head>
@@ -102,7 +114,7 @@ function pagina({ sitio, textos, titulo, ruta, menu, cuerpo }) {
 <title>${tituloCompleto}</title>
 <link rel="stylesheet" href="${raiz}estilos/temas.css">
 <link rel="stylesheet" href="${raiz}estilos/base.css">
-</head>
+${canal}</head>
 <body class="tema-${escapar(sitio.tema)}">
 <header class="top">
 <a class="brand" href="${raiz}">${nombre}</a>
@@ -113,20 +125,10 @@ ${enlaces}
 <main>
 ${cuerpo}
 </main>
-<footer class="pie">${nombre}</footer>
+<footer class="pie">${nombre}${pieCanal}</footer>
 </body>
 </html>
 `;
-}
-
-// Texto simple a párrafos: una línea en blanco separa párrafos.
-function parrafos(texto) {
-  return texto
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map((p) => `<p>${escapar(p)}</p>`)
-    .join('\n');
 }
 
 function perfil({ sitio, textos }) {
@@ -142,13 +144,55 @@ function perfil({ sitio, textos }) {
     : '';
   return `<section class="perfil">
 ${foto}<div class="perfil-texto">
-${lema}${parrafos(sitio.presentacion)}
+${lema}${aHtml(sitio.presentacion, { raizImagenes: `${sitio.raiz}imagenes/` })}
 ${redes}</div>
 </section>`;
 }
 
 // Cuerpo de la portada.
-function portada({ sitio, textos, trabajos }) {
+// "2026-11-15" -> "15 de noviembre de 2026" (sin depender del idioma del equipo).
+function fechaLarga(fecha, textos) {
+  const [año, mes, dia] = fecha.split('-').map(Number);
+  return `${dia} de ${textos.meses[mes - 1]} de ${año}`;
+}
+
+function fechaHtml(fecha, textos) {
+  return `<time datetime="${escapar(fecha)}">${escapar(fechaLarga(fecha, textos))}</time>`;
+}
+
+function listaEntradas(entradas, { sitio, textos }) {
+  if (!entradas.length) return '';
+  return `<ul class="entradas">\n${entradas
+    .map(
+      (e) =>
+        `<li>${fechaHtml(e.fecha, textos)} <a href="${escapar(sitio.raiz + RUTA_BLOG + e.slug)}/">${escapar(e.titulo)}</a></li>`
+    )
+    .join('\n')}\n</ul>`;
+}
+
+// Cuerpo de la lista del blog.
+function blogIndice({ sitio, textos, entradas }) {
+  return `<h1>${escapar(textos.titulos.blog)}</h1>\n${listaEntradas(entradas, { sitio, textos })}`;
+}
+
+// Cuerpo de la página de una entrada. El HTML del texto ya viene limpio
+// del conversor de Markdown.
+function entrada({ sitio, textos, entrada: e }) {
+  return `<article class="entrada">
+<h1>${escapar(e.titulo)}</h1>
+<p class="hint">${fechaHtml(e.fecha, textos)}</p>
+${e.html}
+</article>
+<p class="volver"><a href="${escapar(sitio.raiz + RUTA_BLOG)}">${escapar(textos.frases.volverAlBlog)}</a></p>`;
+}
+
+function noEncontrado({ sitio, textos }) {
+  return `<h1>${escapar(textos.titulos.noEncontrado)}</h1>
+<p>${escapar(textos.frases.noEncontrado)}</p>
+<p><a href="${escapar(sitio.raiz)}">${escapar(textos.frases.irAlInicio)}</a></p>`;
+}
+
+function portada({ sitio, textos, trabajos, entradas }) {
   const contexto = { sitio, textos };
   const recientes = trabajos.slice(0, MAX_FICHAS_PORTADA);
   return [
@@ -156,9 +200,14 @@ function portada({ sitio, textos, trabajos }) {
     escucha(trabajos, contexto, MAX_ESCUCHA_PORTADA),
     recientes.length ? `<h2>${escapar(textos.titulos.ultimos)}</h2>` : '',
     fichas(recientes, contexto),
+    entradas.length ? `<h2>${escapar(textos.titulos.delBlog)}</h2>` : '',
+    listaEntradas(entradas.slice(0, MAX_ENTRADAS_PORTADA), contexto),
   ]
     .filter(Boolean)
     .join('\n');
 }
 
-module.exports = { pagina, portada, menuDe, ficha, seccion, SECCIONES, CSP };
+module.exports = {
+  pagina, portada, menuDe, ficha, seccion, blogIndice, entrada, noEncontrado, fechaLarga,
+  SECCIONES, RUTA_BLOG, RUTA_FEED, CSP,
+};

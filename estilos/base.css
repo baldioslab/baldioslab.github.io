@@ -50,4 +50,22 @@ code { font-family: "Courier New", Courier, monospace; }
 .cancion { flex: 1 1 160px; font-style: italic; overflow-wrap: anywhere; }
 .escucha audio { flex: 1 1 260px; max-width: 100%; height: 36px; }
 
+/* Blog: lista de entradas y texto de una entrada. */
+.entradas { list-style: none; padding: 0; margin: 0; }
+.entradas li { margin: 0 0 8px; overflow-wrap: anywhere; }
+.entradas time { display: inline-block; min-width: 190px; font: 14px "Courier New", Courier, monospace; color: var(--muted); }
+.entrada h2, .entrada h3, .entrada h4 { font: italic bold 20px Georgia, "Times New Roman", serif; text-transform: none; letter-spacing: 0;
+  border: 0; padding: 0; margin: 24px 0 8px; }
+.entrada h3 { font-size: 18px; }
+.entrada h4 { font-size: 16px; }
+.entrada img, .perfil-texto img { display: block; max-width: 100%; height: auto; margin: 14px 0; border: 2px solid var(--line); }
+.entrada ul, .entrada ol { padding-left: 24px; margin: 0 0 10px; }
+.entrada li { margin: 0 0 4px; }
+blockquote { margin: 14px 0; padding: 6px 12px; border-left: 6px solid var(--accent); font-style: italic; }
+blockquote p:last-child { margin: 0; }
+pre { margin: 14px 0; padding: 10px 12px; border: 2px solid var(--line); background: var(--bg); overflow-x: auto; font-size: 14px; line-height: 1.4; }
+hr { border: 0; border-top: 2px dotted var(--line); margin: 22px 0; }
+.volver { margin: 26px 0 0; font: 14px "Courier New", Courier, monospace; }
+.volver a::before { content: "← "; color: var(--muted); }
+
 .pie { margin-top: 22px; font: 13px "Courier New", Courier, monospace; color: var(--muted); text-transform: lowercase; }

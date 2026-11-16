@@ -3,7 +3,11 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { cargarContenido } = require('./contenido.js');
-const { pagina, portada, menuDe, seccion, SECCIONES } = require('./plantillas.js');
+const {
+  pagina, portada, menuDe, seccion, blogIndice, entrada, noEncontrado,
+  SECCIONES, RUTA_BLOG, RUTA_FEED,
+} = require('./plantillas.js');
+const { feed } = require('./feed.js');
 const textos = require('./textos.es.json');
 
 const DIR_ESTILOS = path.join(__dirname, '..', 'estilos');
@@ -17,9 +21,17 @@ function construir(dirContenido, dirSalida, opciones = {}) {
     throw new Error(`La carpeta de salida debe llamarse «salida» (dice: «${dirSalida}»)`);
   }
 
-  const { sitio, trabajos, entradas, avisos } = cargarContenido(dirContenido, opciones);
+  // Primero se lee y valida todo: si hay un error, la salida anterior no se toca.
+  const { sitio, trabajos, entradas, avisos, imagenes } = cargarContenido(dirContenido, opciones);
   const menu = menuDe({ sitio, textos, trabajos, entradas });
   const paginas = [];
+
+  // El canal RSS necesita la dirección pública completa para sus enlaces.
+  const direccionCompleta = sitio.direccion !== '/';
+  sitio.conFeed = entradas.length > 0 && direccionCompleta;
+  if (entradas.length > 0 && !direccionCompleta) {
+    avisos.push('sitio.txt: falta «direccion», así que no se generó el canal RSS del blog');
+  }
 
   fs.rmSync(dirSalida, { recursive: true, force: true });
   fs.mkdirSync(dirSalida, { recursive: true });
@@ -29,46 +41,41 @@ function construir(dirContenido, dirSalida, opciones = {}) {
     fs.mkdirSync(path.dirname(destino), { recursive: true });
     fs.writeFileSync(destino, texto);
     paginas.push(ruta);
-    if (ruta.endsWith('.html') && Buffer.byteLength(texto) > LIMITE_PAGINA) {
-      avisos.push(`${ruta}: pesa más de 50 KB (${Buffer.byteLength(texto)} bytes)`);
+    const peso = Buffer.byteLength(texto);
+    if (ruta.endsWith('.html') && peso > LIMITE_PAGINA) {
+      avisos.push(`${ruta}: la página pesa ${Math.round(peso / 1000)} KB; el límite acordado es 50 KB`);
     }
   }
 
-  escribir(
-    'index.html',
-    pagina({
-      sitio,
-      textos,
-      titulo: '',
-      ruta: '',
-      menu,
-      cuerpo: portada({ sitio, textos, trabajos, entradas }),
-    })
-  );
+  function escribirPagina(ruta, titulo, cuerpo, archivo = `${ruta}index.html`) {
+    escribir(archivo, pagina({ sitio, textos, titulo, ruta, menu, cuerpo }));
+  }
+
+  escribirPagina('', '', portada({ sitio, textos, trabajos, entradas }));
 
   for (const s of SECCIONES) {
     if (!trabajos.some((t) => t.tipo === s.tipo)) continue;
-    escribir(
-      `${s.ruta}index.html`,
-      pagina({
-        sitio,
-        textos,
-        titulo: textos.titulos[s.clave],
-        ruta: s.ruta,
-        menu,
-        cuerpo: seccion({ sitio, textos, tipo: s.tipo, trabajos }),
-      })
-    );
+    escribirPagina(s.ruta, textos.titulos[s.clave], seccion({ sitio, textos, tipo: s.tipo, trabajos }));
   }
 
-  // Solo se copian los archivos que alguna ficha usa.
-  for (const t of trabajos) {
-    for (const [carpeta, nombre] of [['imagenes', t.imagen], ['audio', t.audio]]) {
-      if (!nombre) continue;
-      fs.mkdirSync(path.join(dirSalida, carpeta), { recursive: true });
-      fs.copyFileSync(path.join(dirContenido, carpeta, nombre), path.join(dirSalida, carpeta, nombre));
+  if (entradas.length) {
+    escribirPagina(RUTA_BLOG, textos.titulos.blog, blogIndice({ sitio, textos, entradas }));
+    for (const e of entradas) {
+      escribirPagina(`${RUTA_BLOG}${e.slug}/`, e.titulo, entrada({ sitio, textos, entrada: e }));
     }
+    if (sitio.conFeed) escribir(RUTA_FEED, feed(sitio, entradas));
   }
+
+  // GitHub Pages muestra 404.html cuando alguien pide una dirección que no existe.
+  escribirPagina('404', textos.titulos.noEncontrado, noEncontrado({ sitio, textos }), '404.html');
+
+  // Solo se copian los archivos que el contenido usa.
+  function copiar(carpeta, nombre) {
+    fs.mkdirSync(path.join(dirSalida, carpeta), { recursive: true });
+    fs.copyFileSync(path.join(dirContenido, carpeta, nombre), path.join(dirSalida, carpeta, nombre));
+  }
+  for (const nombre of imagenes) copiar('imagenes', nombre);
+  for (const t of trabajos) if (t.audio) copiar('audio', t.audio);
 
   fs.cpSync(DIR_ESTILOS, path.join(dirSalida, 'estilos'), { recursive: true });
   if (sitio.foto) {

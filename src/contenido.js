@@ -4,7 +4,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { leerFicha, uno } = require('./formato.js');
-const { enlaceSeguro } = require('./html.js');
+const { enlaceSeguro, slug } = require('./html.js');
+const { aHtml } = require('./markdown.js');
 
 const TEMAS = ['claro', 'oscuro', 'papel', 'bosque', 'atardecer', 'neon'];
 const TEMA_POR_DEFECTO = 'bosque';
@@ -134,6 +135,17 @@ function adjunto(dir, archivo, clave, valor, subcarpeta, extensiones) {
   return valor;
 }
 
+// Una imagen pesada no detiene el armado: solo deja un aviso (uno por imagen).
+function avisarSiPesa(dir, imagen, archivo, avisos) {
+  const peso = fs.statSync(path.join(dir, 'imagenes', imagen)).size;
+  const inicio = `imagenes/${imagen}: `;
+  if (peso > LIMITE_IMAGEN && !avisos.some((a) => a.startsWith(inicio))) {
+    avisos.push(
+      `${inicio}pesa ${Math.round(peso / 1000)} KB; conviene reducirla a menos de 200 KB (la usa ${archivo})`
+    );
+  }
+}
+
 function cargarTrabajos(dir, avisos) {
   const trabajos = listar(dir, 'trabajos', '.txt').map((nombre) => {
     const archivo = `trabajos/${nombre}`;
@@ -168,14 +180,7 @@ function cargarTrabajos(dir, avisos) {
     }
 
     const imagen = adjunto(dir, archivo, 'imagen', uno(campos, 'imagen'), 'imagenes', EXT_IMAGEN);
-    if (imagen) {
-      const peso = fs.statSync(path.join(dir, 'imagenes', imagen)).size;
-      if (peso > LIMITE_IMAGEN) {
-        avisos.push(
-          `imagenes/${imagen}: pesa ${Math.round(peso / 1000)} KB; conviene reducirla a menos de 200 KB (la usa ${archivo})`
-        );
-      }
-    }
+    if (imagen) avisarSiPesa(dir, imagen, archivo, avisos);
 
     if (uno(campos, 'audio') && tipo !== 'musica') {
       throw new Error(`${archivo}: «audio» solo se puede usar en fichas de tipo musica`);
@@ -189,11 +194,84 @@ function cargarTrabajos(dir, avisos) {
   return trabajos;
 }
 
+// Convierte un texto en Markdown y comprueba que sus imágenes existan.
+// Las imágenes usadas se anotan en "imagenes" para copiarlas a la salida.
+function convertir(dir, archivo, texto, raizImagenes, imagenes, avisos) {
+  const usadas = [];
+  const html = aHtml(texto, { raizImagenes, imagenes: usadas });
+  for (const nombre of usadas) {
+    if (!fs.existsSync(path.join(dir, 'imagenes', nombre))) {
+      throw new Error(`${archivo}: no encuentro la imagen «${nombre}» en la carpeta imagenes/`);
+    }
+    avisarSiPesa(dir, nombre, archivo, avisos);
+    if (!imagenes.includes(nombre)) imagenes.push(nombre);
+  }
+  return html;
+}
+
+// Una fecha AAAA-MM-DD que exista de verdad (no 30 de febrero).
+function esFecha(texto) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(texto)) return false;
+  const d = new Date(`${texto}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === texto;
+}
+
+function cargarEntradas(dir, sitio, imagenes, avisos) {
+  const porSlug = new Map();
+  const entradas = [];
+  for (const nombre of listar(dir, 'blog', '.md')) {
+    const archivo = `blog/${nombre}`;
+    const { campos, cuerpo } = leerArchivo(dir, archivo);
+
+    const titulo = uno(campos, 'titulo');
+    if (!titulo) throw new Error(`${archivo}: falta «titulo»`);
+
+    const sinExtension = nombre.slice(0, -'.md'.length);
+    const prefijo = sinExtension.match(/^(\d{4}-\d{2}-\d{2})-(.+)$/);
+    const fecha = uno(campos, 'fecha') || (prefijo ? prefijo[1] : undefined);
+    if (!fecha) {
+      throw new Error(
+        `${archivo}: falta la «fecha». Va como «fecha: 2026-11-15», o al inicio del nombre del archivo (2026-11-15-titulo.md)`
+      );
+    }
+    if (!esFecha(fecha)) {
+      throw new Error(
+        `${archivo}: la «fecha» debe ser un día real escrito como año-mes-día, por ejemplo 2026-11-15 (dice: «${fecha}»)`
+      );
+    }
+
+    const direccion = slug(prefijo ? prefijo[2] : sinExtension);
+    if (!direccion) {
+      throw new Error(`${archivo}: el nombre del archivo necesita al menos una letra o un número`);
+    }
+    if (porSlug.has(direccion)) {
+      throw new Error(
+        `${archivo}: tendría la misma dirección (blog/${direccion}/) que ${porSlug.get(direccion)}. Cambia el nombre de uno de los dos archivos`
+      );
+    }
+    porSlug.set(direccion, archivo);
+
+    const borrador = sinTildes((uno(campos, 'borrador') || '').toLowerCase());
+    if (['si', 'yes', 'true', '1'].includes(borrador)) continue;
+
+    const html = convertir(dir, archivo, cuerpo, `${sitio.raiz}imagenes/`, imagenes, avisos);
+    entradas.push({ titulo, fecha, slug: direccion, html, cuerpo, archivo });
+  }
+  entradas.sort((a, b) => b.fecha.localeCompare(a.fecha) || a.titulo.localeCompare(b.titulo, 'es'));
+  return entradas;
+}
+
 function cargarContenido(dir, opciones = {}) {
   const avisos = [];
+  const imagenes = [];
   const sitio = cargarSitio(dir, opciones);
   const trabajos = cargarTrabajos(dir, avisos);
-  return { sitio, trabajos, entradas: [], avisos };
+  for (const t of trabajos) {
+    if (t.imagen && !imagenes.includes(t.imagen)) imagenes.push(t.imagen);
+  }
+  convertir(dir, 'sitio.txt', sitio.presentacion, `${sitio.raiz}imagenes/`, imagenes, avisos);
+  const entradas = cargarEntradas(dir, sitio, imagenes, avisos);
+  return { sitio, trabajos, entradas, avisos, imagenes };
 }
 
 module.exports = { cargarContenido, esNombreDeArchivo, TEMAS, TIPOS };
