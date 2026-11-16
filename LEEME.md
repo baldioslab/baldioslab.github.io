@@ -145,4 +145,5 @@ Los **avisos** no detienen nada; solo recomiendan algo:
 - `src/` tiene el programita; `estilos/` los colores y la forma.
 - `pruebas/` se corren con `node --test pruebas/`. Tienen que pasar todas
   antes de publicar.
-- El diseño y el plan están en `docs/`.
+- Al subir cambios a GitHub, `.github/workflows/publicar.yml` corre las pruebas,
+  arma la página y la publica.
