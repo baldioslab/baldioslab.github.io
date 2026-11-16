@@ -9,6 +9,19 @@ const { enlaceSeguro } = require('./html.js');
 const TEMAS = ['claro', 'oscuro', 'papel', 'bosque', 'atardecer', 'neon'];
 const TEMA_POR_DEFECTO = 'bosque';
 
+// Tipos de trabajo y la ruta de la sección de cada uno.
+const TIPOS = { musica: 'musica/', juego: 'juegos/', proyecto: 'proyectos/' };
+const ALIAS_TIPO = {
+  musica: 'musica',
+  juego: 'juego',
+  juegos: 'juego',
+  proyecto: 'proyecto',
+  proyectos: 'proyecto',
+};
+const EXT_IMAGEN = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+const EXT_AUDIO = ['.mp3', '.ogg', '.m4a', '.wav'];
+const LIMITE_IMAGEN = 200000; // bytes; por encima se avisa
+
 // Un nombre de archivo simple: sin carpetas, sin "..", sin caracteres raros.
 function esNombreDeArchivo(nombre) {
   return /^[^\\/:*?"<>|]+$/.test(nombre) && !nombre.startsWith('.') && nombre === nombre.trim();
@@ -89,10 +102,98 @@ function cargarSitio(dir, opciones) {
   };
 }
 
+// Lista ordenada de los archivos de una subcarpeta con cierta extensión.
+function listar(dir, subcarpeta, extension) {
+  const carpeta = path.join(dir, subcarpeta);
+  if (!fs.existsSync(carpeta)) return [];
+  return fs
+    .readdirSync(carpeta, { withFileTypes: true })
+    .filter((e) => e.isFile() && e.name.toLowerCase().endsWith(extension))
+    .map((e) => e.name)
+    .sort();
+}
+
+function sinTildes(texto) {
+  return texto.normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+// Comprueba un archivo adjunto (imagen o audio) nombrado en una ficha.
+function adjunto(dir, archivo, clave, valor, subcarpeta, extensiones) {
+  if (valor === undefined || valor === '') return undefined;
+  if (!esNombreDeArchivo(valor)) {
+    throw new Error(`${archivo}: «${clave}» debe ser solo el nombre de un archivo (dice: «${valor}»)`);
+  }
+  if (!extensiones.includes(path.extname(valor).toLowerCase())) {
+    throw new Error(
+      `${archivo}: «${clave}» debe terminar en ${extensiones.join(', ')} (dice: «${valor}»)`
+    );
+  }
+  if (!fs.existsSync(path.join(dir, subcarpeta, valor))) {
+    throw new Error(`${archivo}: no encuentro «${valor}» en la carpeta ${subcarpeta}/`);
+  }
+  return valor;
+}
+
+function cargarTrabajos(dir, avisos) {
+  const trabajos = listar(dir, 'trabajos', '.txt').map((nombre) => {
+    const archivo = `trabajos/${nombre}`;
+    const { campos } = leerArchivo(dir, archivo);
+
+    const titulo = uno(campos, 'titulo');
+    if (!titulo) throw new Error(`${archivo}: falta «titulo»`);
+
+    const tipoEscrito = uno(campos, 'tipo');
+    if (!tipoEscrito) {
+      throw new Error(`${archivo}: falta «tipo» (${Object.keys(TIPOS).join(', ')})`);
+    }
+    const tipo = ALIAS_TIPO[sinTildes(tipoEscrito.toLowerCase())];
+    if (!tipo) {
+      throw new Error(
+        `${archivo}: el «tipo» debe ser uno de: ${Object.keys(TIPOS).join(', ')} (dice: «${tipoEscrito}»)`
+      );
+    }
+
+    const añoEscrito = uno(campos, 'año');
+    if (!añoEscrito) throw new Error(`${archivo}: falta «año»`);
+    if (!/^\d{4}$/.test(añoEscrito)) {
+      throw new Error(`${archivo}: el «año» va con cuatro cifras, como 2025 (dice: «${añoEscrito}»)`);
+    }
+
+    const enlace = uno(campos, 'enlace');
+    if (!enlace) throw new Error(`${archivo}: falta «enlace»`);
+    if (!enlaceSeguro(enlace)) {
+      throw new Error(
+        `${archivo}: el «enlace» debe empezar con https:// o http:// (dice: «${enlace}»)`
+      );
+    }
+
+    const imagen = adjunto(dir, archivo, 'imagen', uno(campos, 'imagen'), 'imagenes', EXT_IMAGEN);
+    if (imagen) {
+      const peso = fs.statSync(path.join(dir, 'imagenes', imagen)).size;
+      if (peso > LIMITE_IMAGEN) {
+        avisos.push(
+          `imagenes/${imagen}: pesa ${Math.round(peso / 1000)} KB; conviene reducirla a menos de 200 KB (la usa ${archivo})`
+        );
+      }
+    }
+
+    if (uno(campos, 'audio') && tipo !== 'musica') {
+      throw new Error(`${archivo}: «audio» solo se puede usar en fichas de tipo musica`);
+    }
+    const audio = adjunto(dir, archivo, 'audio', uno(campos, 'audio'), 'audio', EXT_AUDIO);
+
+    return { titulo, tipo, año: Number(añoEscrito), enlace, imagen, audio, archivo };
+  });
+
+  trabajos.sort((a, b) => b.año - a.año || a.titulo.localeCompare(b.titulo, 'es'));
+  return trabajos;
+}
+
 function cargarContenido(dir, opciones = {}) {
   const avisos = [];
   const sitio = cargarSitio(dir, opciones);
-  return { sitio, trabajos: [], entradas: [], avisos };
+  const trabajos = cargarTrabajos(dir, avisos);
+  return { sitio, trabajos, entradas: [], avisos };
 }
 
-module.exports = { cargarContenido, esNombreDeArchivo, TEMAS };
+module.exports = { cargarContenido, esNombreDeArchivo, TEMAS, TIPOS };

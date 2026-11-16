@@ -1,0 +1,9 @@
+# Ficha de ejemplo: bórrala o cámbiala por una tuya.
+# tipo puede ser: musica, juego o proyecto.
+# imagen y audio son opcionales; los archivos van en contenido/imagenes/ y contenido/audio/.
+
+titulo: Canción de ejemplo
+tipo: musica
+año: 2026
+enlace: https://ejemplo.bandcamp.com/track/cancion-de-ejemplo
+audio: ejemplo.wav

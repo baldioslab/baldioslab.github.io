@@ -35,4 +35,19 @@ code { font-family: "Courier New", Courier, monospace; }
 .links li { overflow-wrap: anywhere; }
 .links li::before { content: "→ "; color: var(--muted); }
 
+/* Fichas de trabajos: cada una es un enlace completo al sitio externo. */
+.fichas { list-style: none; padding: 0; margin: 14px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.ficha { display: block; height: 100%; padding: 8px 10px; border: 2px solid var(--line); background: var(--bg); text-decoration: none; overflow-wrap: anywhere; }
+.ficha b { display: block; }
+.ficha .hint { display: block; font-family: "Courier New", Courier, monospace; }
+.ficha img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; margin-bottom: 8px; border: 2px solid var(--line); background: var(--stripe); }
+.ficha:hover, .ficha:focus-visible { background: var(--accent); color: var(--bg); }
+.ficha:hover .hint, .ficha:focus-visible .hint { color: var(--bg); }
+
+/* Canciones que suenan en la página. */
+.escucha { list-style: none; padding: 0; margin: 0; }
+.escucha li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 0 0 10px; }
+.cancion { flex: 1 1 160px; font-style: italic; overflow-wrap: anywhere; }
+.escucha audio { flex: 1 1 260px; max-width: 100%; height: 36px; }
+
 .pie { margin-top: 22px; font: 13px "Courier New", Courier, monospace; color: var(--muted); text-transform: lowercase; }

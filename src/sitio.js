@@ -3,7 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { cargarContenido } = require('./contenido.js');
-const { pagina, portada, menuDe } = require('./plantillas.js');
+const { pagina, portada, menuDe, seccion, SECCIONES } = require('./plantillas.js');
 const textos = require('./textos.es.json');
 
 const DIR_ESTILOS = path.join(__dirname, '..', 'estilos');
@@ -45,6 +45,30 @@ function construir(dirContenido, dirSalida, opciones = {}) {
       cuerpo: portada({ sitio, textos, trabajos, entradas }),
     })
   );
+
+  for (const s of SECCIONES) {
+    if (!trabajos.some((t) => t.tipo === s.tipo)) continue;
+    escribir(
+      `${s.ruta}index.html`,
+      pagina({
+        sitio,
+        textos,
+        titulo: textos.titulos[s.clave],
+        ruta: s.ruta,
+        menu,
+        cuerpo: seccion({ sitio, textos, tipo: s.tipo, trabajos }),
+      })
+    );
+  }
+
+  // Solo se copian los archivos que alguna ficha usa.
+  for (const t of trabajos) {
+    for (const [carpeta, nombre] of [['imagenes', t.imagen], ['audio', t.audio]]) {
+      if (!nombre) continue;
+      fs.mkdirSync(path.join(dirSalida, carpeta), { recursive: true });
+      fs.copyFileSync(path.join(dirContenido, carpeta, nombre), path.join(dirSalida, carpeta, nombre));
+    }
+  }
 
   fs.cpSync(DIR_ESTILOS, path.join(dirSalida, 'estilos'), { recursive: true });
   if (sitio.foto) {

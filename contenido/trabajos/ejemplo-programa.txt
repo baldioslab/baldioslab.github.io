@@ -1,0 +1,4 @@
+titulo: Programa de ejemplo
+tipo: proyecto
+año: 2025
+enlace: https://github.com/GA2991

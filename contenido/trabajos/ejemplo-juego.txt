@@ -1,0 +1,4 @@
+titulo: Juego de ejemplo
+tipo: juego
+año: 2026
+enlace: https://ejemplo.itch.io/juego-de-ejemplo

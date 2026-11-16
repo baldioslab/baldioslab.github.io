@@ -7,9 +7,78 @@ const { escapar } = require('./html.js');
 const CSP =
   "default-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; base-uri 'none'; form-action 'none'";
 
+// Secciones de trabajos: qué tipo muestra cada una, su ruta y su clave de texto.
+const SECCIONES = [
+  { tipo: 'musica', ruta: 'musica/', clave: 'musica' },
+  { tipo: 'juego', ruta: 'juegos/', clave: 'juegos' },
+  { tipo: 'proyecto', ruta: 'proyectos/', clave: 'proyectos' },
+];
+const MAX_ESCUCHA_PORTADA = 3;
+const MAX_FICHAS_PORTADA = 6;
+
 // El menú: solo aparecen las secciones que tienen algo.
-function menuDe({ textos }) {
-  return [{ texto: textos.menu.inicio, ruta: '' }];
+function menuDe({ textos, trabajos }) {
+  const menu = [{ texto: textos.menu.inicio, ruta: '' }];
+  for (const s of SECCIONES) {
+    if (trabajos.some((t) => t.tipo === s.tipo)) {
+      menu.push({ texto: textos.menu[s.clave], ruta: s.ruta });
+    }
+  }
+  return menu;
+}
+
+// Dirección de un archivo propio (imagen, audio, foto) dentro del sitio.
+function rutaArchivo(sitio, carpeta, nombre) {
+  return escapar(sitio.raiz + carpeta + encodeURIComponent(nombre));
+}
+
+// Una ficha: toda ella es un enlace al sitio donde vive el trabajo.
+function ficha(trabajo, { sitio, textos }) {
+  const imagen = trabajo.imagen
+    ? `<img src="${rutaArchivo(sitio, 'imagenes/', trabajo.imagen)}" alt="" loading="lazy" width="200" height="200">`
+    : '';
+  return (
+    `<a class="ficha" href="${escapar(trabajo.enlace)}" rel="noopener">${imagen}` +
+    `<b>${escapar(trabajo.titulo)}</b>` +
+    `<span class="hint">${escapar(textos.tipos[trabajo.tipo])} · ${trabajo.año}</span></a>`
+  );
+}
+
+function fichas(trabajos, contexto) {
+  if (!trabajos.length) return '';
+  return `<ul class="fichas">\n${trabajos
+    .map((t) => `<li>${ficha(t, contexto)}</li>`)
+    .join('\n')}\n</ul>`;
+}
+
+// Las canciones que suenan en la página, con el reproductor del navegador.
+// preload="none": no se descarga nada hasta que el visitante le da play.
+function escucha(trabajos, { sitio, textos }, maximo = Infinity) {
+  const conAudio = trabajos.filter((t) => t.audio).slice(0, maximo);
+  if (!conAudio.length) return '';
+  return `<h2>${escapar(textos.titulos.escucha)}</h2>
+<ul class="escucha">
+${conAudio
+  .map(
+    (t) =>
+      `<li><span class="cancion">${escapar(t.titulo)}</span>` +
+      `<audio controls preload="none" src="${rutaArchivo(sitio, 'audio/', t.audio)}"></audio></li>`
+  )
+  .join('\n')}
+</ul>`;
+}
+
+// Cuerpo de la página de una sección (música, juegos o proyectos).
+function seccion({ sitio, textos, tipo, trabajos }) {
+  const s = SECCIONES.find((x) => x.tipo === tipo);
+  const propios = trabajos.filter((t) => t.tipo === tipo);
+  return [
+    `<h1>${escapar(textos.titulos[s.clave])}</h1>`,
+    escucha(propios, { sitio, textos }),
+    fichas(propios, { sitio, textos }),
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 // Documento completo: encabezado con el nombre y el menú, el cuerpo y el pie.
@@ -63,7 +132,7 @@ function parrafos(texto) {
 function perfil({ sitio, textos }) {
   const raiz = escapar(sitio.raiz);
   const foto = sitio.foto
-    ? `<img class="photo" src="${raiz}${escapar(sitio.foto)}" alt="${escapar(textos.frases.fotoAlt)}" width="160" height="160">\n`
+    ? `<img class="photo" src="${rutaArchivo(sitio, '', sitio.foto)}" alt="${escapar(textos.frases.fotoAlt)}" width="160" height="160">\n`
     : '';
   const lema = sitio.lema ? `<p class="lema">${escapar(sitio.lema)}</p>\n` : '';
   const redes = sitio.redes.length
@@ -79,8 +148,17 @@ ${redes}</div>
 }
 
 // Cuerpo de la portada.
-function portada({ sitio, textos }) {
-  return perfil({ sitio, textos });
+function portada({ sitio, textos, trabajos }) {
+  const contexto = { sitio, textos };
+  const recientes = trabajos.slice(0, MAX_FICHAS_PORTADA);
+  return [
+    perfil(contexto),
+    escucha(trabajos, contexto, MAX_ESCUCHA_PORTADA),
+    recientes.length ? `<h2>${escapar(textos.titulos.ultimos)}</h2>` : '',
+    fichas(recientes, contexto),
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
-module.exports = { pagina, portada, menuDe, CSP };
+module.exports = { pagina, portada, menuDe, ficha, seccion, SECCIONES, CSP };
