@@ -230,3 +230,10 @@ test('una sección sin fichas no se genera', () => {
   assert.ok(!paginas.includes('musica/index.html'));
   assert.ok(!fs.existsSync(path.join(salida, 'musica')));
 });
+
+test('las mayúsculas del nombre de un archivo tienen que coincidir', () => {
+  // En Windows «Portada.JPG» y «portada.jpg» son el mismo archivo, pero en
+  // GitHub no: si no se avisa aquí, la página fallaría recién al publicar.
+  fallaCon(con(DISCO, 'imagen', 'Portada.JPG'), /trabajos\/mala\.txt.*Portada\.JPG.*portada\.jpg/);
+  fallaCon(con(DISCO, 'audio', 'CANCION.mp3'), /trabajos\/mala\.txt.*CANCION\.mp3.*cancion\.mp3/);
+});

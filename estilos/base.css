@@ -5,7 +5,7 @@
 body { margin: 0; padding: 0 10px 40px; color: var(--fg); font: 16px/1.5 Georgia, "Times New Roman", serif;
   background: var(--bg) repeating-linear-gradient(135deg, var(--stripe) 0 2px, transparent 2px 14px); }
 a { color: var(--fg); text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 3px; }
-a:hover, a:focus-visible { background: var(--accent); color: var(--bg); }
+a:hover, a:focus-visible { background: var(--accent); color: var(--panel); }
 
 .top, main, .pie { max-width: 720px; margin: 0 auto; }
 .top { padding: 22px 0 10px; font-family: "Courier New", Courier, monospace; }
@@ -41,8 +41,8 @@ code { font-family: "Courier New", Courier, monospace; }
 .ficha b { display: block; }
 .ficha .hint { display: block; font-family: "Courier New", Courier, monospace; }
 .ficha img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; margin-bottom: 8px; border: 2px solid var(--line); background: var(--stripe); }
-.ficha:hover, .ficha:focus-visible { background: var(--accent); color: var(--bg); }
-.ficha:hover .hint, .ficha:focus-visible .hint { color: var(--bg); }
+.ficha:hover, .ficha:focus-visible { background: var(--accent); color: var(--panel); }
+.ficha:hover .hint, .ficha:focus-visible .hint { color: var(--panel); }
 
 /* Canciones que suenan en la página. */
 .escucha { list-style: none; padding: 0; margin: 0; }

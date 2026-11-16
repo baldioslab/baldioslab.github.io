@@ -53,3 +53,8 @@ test('acepta una foto que existe', () => {
   const dir = carpeta({ 'sitio.txt': sitioCon({ foto: 'foto.jpg' }), 'foto.jpg': 'x' });
   assert.equal(cargarContenido(dir).sitio.foto, 'foto.jpg');
 });
+
+test('las mayúsculas del nombre de la foto tienen que coincidir', () => {
+  const dir = carpeta({ 'sitio.txt': sitioCon({ foto: 'Foto.JPG' }), 'foto.jpg': 'x' });
+  assert.throws(() => cargarContenido(dir), /sitio\.txt.*Foto\.JPG.*foto\.jpg/);
+});

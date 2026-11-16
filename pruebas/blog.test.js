@@ -272,3 +272,10 @@ test('una entrada enorme produce un aviso que la nombra', () => {
   assert.equal(avisos.length, 1);
   assert.match(avisos[0], /blog\/larga\/index\.html/);
 });
+
+test('las mayúsculas del nombre de una imagen del blog tienen que coincidir', () => {
+  falla(
+    { 'blog/2026-01-01-x.md': 'titulo: X\n---\n![a](Foto.PNG)', 'imagenes/foto.png': 'x' },
+    /blog\/2026-01-01-x\.md.*Foto\.PNG.*foto\.png/
+  );
+});

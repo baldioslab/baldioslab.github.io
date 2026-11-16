@@ -28,6 +28,21 @@ function esNombreDeArchivo(nombre) {
   return /^[^\\/:*?"<>|]+$/.test(nombre) && !nombre.startsWith('.') && nombre === nombre.trim();
 }
 
+// Comprueba que un archivo exista con ese nombre exacto. En Windows
+// «Foto.JPG» y «foto.jpg» son el mismo archivo, pero en GitHub (donde se
+// arma la página publicada) no: por eso se exige que coincidan.
+function exigirArchivo(carpeta, nombre, origen, lugar) {
+  const nombres = fs.existsSync(carpeta) ? fs.readdirSync(carpeta) : [];
+  if (nombres.includes(nombre)) return;
+  const parecido = nombres.find((n) => n.toLowerCase() === nombre.toLowerCase());
+  if (parecido) {
+    throw new Error(
+      `${origen}: dice «${nombre}» pero el archivo se llama «${parecido}». Las mayúsculas y minúsculas tienen que coincidir`
+    );
+  }
+  throw new Error(`${origen}: no encuentro «${nombre}» en ${lugar}`);
+}
+
 function leerArchivo(dir, nombre) {
   const texto = fs.readFileSync(path.join(dir, nombre), 'utf8');
   try {
@@ -84,9 +99,7 @@ function cargarSitio(dir, opciones) {
     if (!esNombreDeArchivo(foto)) {
       throw new Error(`sitio.txt: «foto» debe ser solo el nombre de un archivo (dice: «${foto}»)`);
     }
-    if (!fs.existsSync(path.join(dir, foto))) {
-      throw new Error(`sitio.txt: no encuentro la foto «${foto}» en la carpeta de contenido`);
-    }
+    exigirArchivo(dir, foto, 'sitio.txt', 'la carpeta de contenido');
   }
 
   const direccionDada =
@@ -129,9 +142,7 @@ function adjunto(dir, archivo, clave, valor, subcarpeta, extensiones) {
       `${archivo}: «${clave}» debe terminar en ${extensiones.join(', ')} (dice: «${valor}»)`
     );
   }
-  if (!fs.existsSync(path.join(dir, subcarpeta, valor))) {
-    throw new Error(`${archivo}: no encuentro «${valor}» en la carpeta ${subcarpeta}/`);
-  }
+  exigirArchivo(path.join(dir, subcarpeta), valor, archivo, `la carpeta ${subcarpeta}/`);
   return valor;
 }
 
@@ -200,9 +211,7 @@ function convertir(dir, archivo, texto, raizImagenes, imagenes, avisos) {
   const usadas = [];
   const html = aHtml(texto, { raizImagenes, imagenes: usadas });
   for (const nombre of usadas) {
-    if (!fs.existsSync(path.join(dir, 'imagenes', nombre))) {
-      throw new Error(`${archivo}: no encuentro la imagen «${nombre}» en la carpeta imagenes/`);
-    }
+    exigirArchivo(path.join(dir, 'imagenes'), nombre, archivo, 'la carpeta imagenes/');
     avisarSiPesa(dir, nombre, archivo, avisos);
     if (!imagenes.includes(nombre)) imagenes.push(nombre);
   }
