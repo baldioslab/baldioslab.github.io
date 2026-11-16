@@ -1,0 +1,47 @@
+# Publica la página en GitHub Pages cada vez que se suben cambios a "main".
+# Pasos: corre las pruebas, arma la página y la despliega.
+# Si las pruebas o el armado fallan, no se publica y la página anterior sigue en pie.
+name: Publicar la página
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Si llegan dos publicaciones seguidas, se espera a que termine la primera.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  armar:
+    name: Probar y armar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - name: Correr las pruebas
+        run: node --test "pruebas/*.test.js"
+      - name: Armar la página
+        run: node construir.js
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: salida
+
+  publicar:
+    name: Publicar
+    needs: armar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - id: despliegue
+        uses: actions/deploy-pages@v5
