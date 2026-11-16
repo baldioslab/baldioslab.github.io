@@ -1,0 +1,23 @@
+# Datos generales de la página. Las líneas que empiezan con # no se leen.
+
+nombre: baldíos lab
+lema: música · videojuegos · software
+
+# Temas disponibles: claro, oscuro, papel, bosque, atardecer, neon
+tema: bosque
+
+# La dirección pública de la página (se define al publicar).
+direccion: https://baldioslab.github.io/
+
+# Foto de portada (opcional): pon el archivo en esta carpeta y quita el # de abajo.
+# foto: foto.jpg
+
+# Redes: una por línea, como «nombre | dirección». Estas son de relleno.
+red: bandcamp | https://ejemplo.bandcamp.com
+red: soundcloud | https://soundcloud.com/ejemplo
+red: itch.io | https://ejemplo.itch.io
+red: github | https://github.com/GA2991
+---
+Un párrafo corto sobre quién eres y qué haces.
+
+Puede tener más de un párrafo: deja una línea en blanco entre ellos.

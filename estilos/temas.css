@@ -1,0 +1,8 @@
+/* Temas de color. Cada tema solo define colores; la forma vive en base.css.
+   El tema se elige con la línea "tema:" de contenido/sitio.txt. */
+.tema-claro     { --bg: #efe8da; --stripe: #e6dece; --panel: #fffdf6; --fg: #17130f; --line: #17130f; --muted: #6b6257; --accent: #c8371b; }
+.tema-oscuro    { --bg: #101010; --stripe: #181818; --panel: #1c1c1c; --fg: #ebe7df; --line: #ebe7df; --muted: #9a958c; --accent: #e0a526; }
+.tema-papel     { --bg: #dccba6; --stripe: #d3c199; --panel: #f3e7c9; --fg: #3a2717; --line: #3a2717; --muted: #7a6046; --accent: #2f6b4f; }
+.tema-bosque    { --bg: #1a3325; --stripe: #1f3b2b; --panel: #264a36; --fg: #f1ead2; --line: #f1ead2; --muted: #b7c2a3; --accent: #e8b84a; }
+.tema-atardecer { --bg: #2a1838; --stripe: #331d42; --panel: #47264e; --fg: #ffe8d2; --line: #ffe8d2; --muted: #d6a98f; --accent: #ff8a5c; }
+.tema-neon      { --bg: #07000f; --stripe: #12001f; --panel: #14002a; --fg: #f4eaff; --line: #f4eaff; --muted: #b59ad6; --accent: #ff3df0; }

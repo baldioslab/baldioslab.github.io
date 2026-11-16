@@ -1,0 +1,37 @@
+{
+  "menu": {
+    "inicio": "inicio",
+    "musica": "música",
+    "juegos": "juegos",
+    "proyectos": "proyectos",
+    "blog": "blog"
+  },
+  "titulos": {
+    "escucha": "Escucha",
+    "ultimos": "Últimos trabajos",
+    "delBlog": "Del blog",
+    "redes": "En otros sitios",
+    "musica": "Música",
+    "juegos": "Juegos",
+    "proyectos": "Proyectos",
+    "blog": "Blog",
+    "noEncontrado": "No encontrado"
+  },
+  "tipos": {
+    "musica": "música",
+    "juego": "juego",
+    "proyecto": "proyecto"
+  },
+  "frases": {
+    "fotoAlt": "Foto de portada",
+    "volverAlBlog": "volver al blog",
+    "noEncontrado": "Esta página no existe o cambió de lugar.",
+    "irAlInicio": "ir al inicio",
+    "verTodo": "ver todo",
+    "rss": "rss"
+  },
+  "meses": [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+  ]
+}
